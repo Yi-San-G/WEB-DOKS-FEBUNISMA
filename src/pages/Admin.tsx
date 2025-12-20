@@ -24,7 +24,11 @@ import {
   Send,
   Check,
   Clock,
-  Bell
+  Bell,
+  Download,
+  Trash2,
+  ExternalLink,
+  RotateCcw
 } from "lucide-react";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
@@ -46,6 +50,7 @@ interface Submission {
   created_at: string;
   pdf_url: string;
   word_url: string;
+  deleted_at: string | null;
 }
 
 const jurusanLabels: Record<string, string> = {
@@ -63,11 +68,13 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedJurusan, setSelectedJurusan] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"pending" | "history">("pending");
+  const [activeTab, setActiveTab] = useState<"pending" | "history" | "trash">("pending");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [feedbackText, setFeedbackText] = useState<Record<string, string>>({});
   const [sendingFeedback, setSendingFeedback] = useState<string | null>(null);
   const [accepting, setAccepting] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [restoring, setRestoring] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) {
@@ -180,13 +187,119 @@ export default function Admin() {
     }
   };
 
-  const pendingSubmissions = submissions.filter((s) => s.status === "pending" || s.status === "reviewed");
-  const acceptedSubmissions = submissions.filter((s) => s.status === "accepted");
+  const handleDelete = async (submission: Submission) => {
+    setDeleting(submission.id);
+
+    try {
+      const { error } = await supabase
+        .from("submissions")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", submission.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Berhasil",
+        description: `Data ${submission.nama} telah dipindahkan ke Sampah`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Gagal",
+        description: err.message,
+      });
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const handleRestore = async (submission: Submission) => {
+    setRestoring(submission.id);
+
+    try {
+      const { error } = await supabase
+        .from("submissions")
+        .update({ deleted_at: null })
+        .eq("id", submission.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Berhasil",
+        description: `Data ${submission.nama} telah dipulihkan`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Gagal",
+        description: err.message,
+      });
+    } finally {
+      setRestoring(null);
+    }
+  };
+
+  const handlePermanentDelete = async (submission: Submission) => {
+    if (!confirm(`Apakah Anda yakin ingin menghapus permanen data ${submission.nama}? Tindakan ini tidak dapat dibatalkan.`)) {
+      return;
+    }
+
+    setDeleting(submission.id);
+
+    try {
+      const { error } = await supabase
+        .from("submissions")
+        .delete()
+        .eq("id", submission.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Berhasil",
+        description: `Data ${submission.nama} telah dihapus permanen`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Gagal",
+        description: err.message,
+      });
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const handleDownload = async (url: string, filename: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Gagal",
+        description: "Gagal mengunduh file",
+      });
+    }
+  };
+
+  const pendingSubmissions = submissions.filter((s) => (s.status === "pending" || s.status === "reviewed") && !s.deleted_at);
+  const acceptedSubmissions = submissions.filter((s) => s.status === "accepted" && !s.deleted_at);
+  const trashedSubmissions = submissions.filter((s) => s.deleted_at);
 
   const filteredSubmissions = selectedJurusan
     ? acceptedSubmissions.filter((s) => s.jurusan === selectedJurusan)
     : activeTab === "pending"
     ? pendingSubmissions
+    : activeTab === "trash"
+    ? trashedSubmissions
     : acceptedSubmissions;
 
   if (authLoading || loading) {
@@ -259,6 +372,20 @@ export default function Admin() {
               <History className="h-4 w-4 mr-2" />
               {sidebarOpen && "Riwayat"}
             </Button>
+
+            <Button
+              variant={activeTab === "trash" ? "secondary" : "ghost"}
+              className="w-full justify-start"
+              onClick={() => { setActiveTab("trash"); setSelectedJurusan(null); }}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              {sidebarOpen && "Sampah"}
+              {trashedSubmissions.length > 0 && (
+                <Badge className="ml-auto" variant="destructive">
+                  {trashedSubmissions.length}
+                </Badge>
+              )}
+            </Button>
           </nav>
         </ScrollArea>
 
@@ -296,6 +423,8 @@ export default function Admin() {
               ? `Arsip ${jurusanLabels[selectedJurusan]}`
               : activeTab === "pending" 
               ? "Submission Menunggu Review" 
+              : activeTab === "trash"
+              ? "Sampah"
               : "Semua Riwayat"}
           </h2>
 
@@ -374,7 +503,88 @@ export default function Admin() {
                             Lihat PDF
                           </Button>
 
-                          {sub.status !== "accepted" && (
+                          {/* Download buttons for archived/trash items */}
+                          {(sub.status === "accepted" || sub.deleted_at) && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDownload(sub.word_url, `${sub.nim}_${sub.nama}.docx`)}
+                              >
+                                <Download className="h-4 w-4 mr-2" />
+                                Unduh Word
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDownload(sub.pdf_url, `${sub.nim}_${sub.nama}.pdf`)}
+                              >
+                                <Download className="h-4 w-4 mr-2" />
+                                Unduh PDF
+                              </Button>
+                            </>
+                          )}
+
+                          {/* Trash view - Restore and Permanent Delete */}
+                          {sub.deleted_at && (
+                            <>
+                              <Button
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700"
+                                onClick={() => handleRestore(sub)}
+                                disabled={restoring === sub.id}
+                              >
+                                {restoring === sub.id ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <RotateCcw className="h-4 w-4 mr-2" />
+                                )}
+                                Pulihkan
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handlePermanentDelete(sub)}
+                                disabled={deleting === sub.id}
+                              >
+                                {deleting === sub.id ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                )}
+                                Hapus Permanen
+                              </Button>
+                            </>
+                          )}
+
+                          {/* Archive view - Setorkan and Hapus */}
+                          {sub.status === "accepted" && !sub.deleted_at && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => window.open("#", "_self")}
+                              >
+                                <ExternalLink className="h-4 w-4 mr-2" />
+                                Setorkan
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleDelete(sub)}
+                                disabled={deleting === sub.id}
+                              >
+                                {deleting === sub.id ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                )}
+                                Hapus
+                              </Button>
+                            </>
+                          )}
+
+                          {sub.status !== "accepted" && !sub.deleted_at && (
                             <>
                               <Button
                                 variant="outline"
@@ -405,7 +615,7 @@ export default function Admin() {
                         </div>
 
                         {/* Feedback Section */}
-                        {sub.status !== "accepted" && (
+                        {sub.status !== "accepted" && !sub.deleted_at && (
                           <div className="space-y-2">
                             <p className="text-sm font-medium">Tulis Feedback:</p>
                             <div className="bg-white p-3 rounded-lg border">
