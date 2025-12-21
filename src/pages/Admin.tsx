@@ -28,7 +28,8 @@ import {
   Download,
   Trash2,
   ExternalLink,
-  RotateCcw
+  RotateCcw,
+  X
 } from "lucide-react";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
@@ -72,6 +73,7 @@ export default function Admin() {
   const [feedbackText, setFeedbackText] = useState<Record<string, string>>({});
   const [sendingFeedback, setSendingFeedback] = useState<string | null>(null);
   const [accepting, setAccepting] = useState<string | null>(null);
+  const [rejecting, setRejecting] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [restoring, setRestoring] = useState<string | null>(null);
 
@@ -206,6 +208,33 @@ export default function Admin() {
     }
   };
 
+  const handleReject = async (submission: Submission) => {
+    setRejecting(submission.id);
+
+    try {
+      const { error } = await supabase
+        .from("submissions")
+        .update({ status: "rejected" })
+        .eq("id", submission.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Ditolak",
+        description: `Submission dari ${submission.nama} telah ditolak`,
+        variant: "destructive",
+      });
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Gagal",
+        description: err.message,
+      });
+    } finally {
+      setRejecting(null);
+    }
+  };
+
   const handleDelete = async (submission: Submission) => {
     setDeleting(submission.id);
 
@@ -309,7 +338,7 @@ export default function Admin() {
     }
   };
 
-  const pendingSubmissions = submissions.filter((s) => (s.status === "pending" || s.status === "reviewed") && !s.deleted_at);
+  const pendingSubmissions = submissions.filter((s) => (s.status === "pending" || s.status === "reviewed" || s.status === "rejected") && !s.deleted_at);
   const acceptedSubmissions = submissions.filter((s) => s.status === "accepted" && !s.deleted_at);
   const trashedSubmissions = submissions.filter((s) => s.deleted_at);
 
@@ -610,6 +639,19 @@ export default function Admin() {
                                   <Check className="h-4 w-4 mr-2" />
                                 )}
                                 Terima
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleReject(sub)}
+                                disabled={rejecting === sub.id}
+                              >
+                                {rejecting === sub.id ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <X className="h-4 w-4 mr-2" />
+                                )}
+                                Tolak
                               </Button>
                             </>
                           )}
