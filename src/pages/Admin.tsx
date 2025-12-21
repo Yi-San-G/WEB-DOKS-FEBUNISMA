@@ -134,6 +134,26 @@ export default function Admin() {
     try {
       const fullFeedback = `Terima kasih atas data yang Anda kirimkan.\n\nHasil validasi dari admin adalah sebagai berikut:\n${feedback}`;
 
+      // Send email via edge function
+      const { data: emailData, error: emailError } = await supabase.functions.invoke(
+        "send-feedback-email",
+        {
+          body: {
+            to: submission.email,
+            nama: submission.nama,
+            nim: submission.nim,
+            jurusan: submission.jurusan,
+            feedback: fullFeedback,
+          },
+        }
+      );
+
+      if (emailError) {
+        console.error("Email error:", emailError);
+        throw new Error("Gagal mengirim email: " + emailError.message);
+      }
+
+      // Update submission in database
       const { error } = await supabase
         .from("submissions")
         .update({ 
@@ -146,7 +166,7 @@ export default function Admin() {
 
       toast({
         title: "Berhasil",
-        description: `Feedback terkirim ke ${submission.email}`,
+        description: `Email feedback terkirim ke ${submission.email}`,
       });
 
       setFeedbackText((prev) => ({ ...prev, [submission.id]: "" }));
