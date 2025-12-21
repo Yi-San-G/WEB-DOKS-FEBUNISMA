@@ -17,8 +17,7 @@ interface Submission {
   status: string;
   feedback: string | null;
   created_at: string;
-  pdf_url: string;
-  word_url: string;
+  file_url: string;
 }
 
 const statusColors: Record<string, string> = {

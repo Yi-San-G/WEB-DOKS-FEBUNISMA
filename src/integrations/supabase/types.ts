@@ -53,45 +53,42 @@ export type Database = {
           deleted_at: string | null
           email: string
           feedback: string | null
+          file_url: string
           id: string
           jurusan: Database["public"]["Enums"]["jurusan_type"]
           nama: string
           nim: string
-          pdf_url: string
           status: Database["public"]["Enums"]["submission_status"]
           updated_at: string
           user_id: string
-          word_url: string
         }
         Insert: {
           created_at?: string
           deleted_at?: string | null
           email: string
           feedback?: string | null
+          file_url: string
           id?: string
           jurusan: Database["public"]["Enums"]["jurusan_type"]
           nama: string
           nim: string
-          pdf_url: string
           status?: Database["public"]["Enums"]["submission_status"]
           updated_at?: string
           user_id: string
-          word_url: string
         }
         Update: {
           created_at?: string
           deleted_at?: string | null
           email?: string
           feedback?: string | null
+          file_url?: string
           id?: string
           jurusan?: Database["public"]["Enums"]["jurusan_type"]
           nama?: string
           nim?: string
-          pdf_url?: string
           status?: Database["public"]["Enums"]["submission_status"]
           updated_at?: string
           user_id?: string
-          word_url?: string
         }
         Relationships: []
       }
