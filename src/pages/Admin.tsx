@@ -48,8 +48,7 @@ interface Submission {
   status: string;
   feedback: string | null;
   created_at: string;
-  pdf_url: string;
-  word_url: string;
+  file_url: string;
   deleted_at: string | null;
 }
 
@@ -509,40 +508,22 @@ export default function Admin() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => window.open(sub.word_url, "_blank")}
+                            onClick={() => window.open(sub.file_url, "_blank")}
                           >
                             <Eye className="h-4 w-4 mr-2" />
-                            Lihat Word
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open(sub.pdf_url, "_blank")}
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            Lihat PDF
+                            Lihat File
                           </Button>
 
-                          {/* Download buttons for archived/trash items */}
+                          {/* Download button for archived/trash items */}
                           {(sub.status === "accepted" || sub.deleted_at) && (
-                            <>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDownload(sub.word_url, `${sub.nim}_${sub.nama}.docx`)}
-                              >
-                                <Download className="h-4 w-4 mr-2" />
-                                Unduh Word
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDownload(sub.pdf_url, `${sub.nim}_${sub.nama}.pdf`)}
-                              >
-                                <Download className="h-4 w-4 mr-2" />
-                                Unduh PDF
-                              </Button>
-                            </>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDownload(sub.file_url, `${sub.nim}_${sub.nama}.zip`)}
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              Unduh File
+                            </Button>
                           )}
 
                           {/* Trash view - Restore and Permanent Delete */}

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, FileUp, ArrowLeft, FileText, Check } from "lucide-react";
+import { Loader2, FileUp, ArrowLeft, FileText, Check, Archive } from "lucide-react";
 import type { JurusanType } from "@/lib/auth";
 
 export default function Submission() {
@@ -21,8 +21,7 @@ export default function Submission() {
   const [nim, setNim] = useState("");
   const [email, setEmail] = useState("");
   const [jurusan, setJurusan] = useState<JurusanType>("akuntansi");
-  const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [wordFile, setWordFile] = useState<File | null>(null);
+  const [zipFile, setZipFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -36,28 +35,24 @@ export default function Submission() {
     }
   }, [user, profile, authLoading, navigate]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: "pdf" | "word") => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const validTypes = type === "pdf" 
-      ? ["application/pdf"] 
-      : ["application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+    const validTypes = ["application/zip", "application/x-zip-compressed", "application/x-rar-compressed", "application/vnd.rar"];
+    const validExtensions = [".zip", ".rar"];
+    const fileExtension = file.name.toLowerCase().slice(file.name.lastIndexOf("."));
 
-    if (!validTypes.includes(file.type)) {
+    if (!validTypes.includes(file.type) && !validExtensions.includes(fileExtension)) {
       toast({
         variant: "destructive",
         title: "File Tidak Valid",
-        description: `Mohon upload file ${type.toUpperCase()} yang valid`,
+        description: "Mohon upload file ZIP atau RAR yang valid",
       });
       return;
     }
 
-    if (type === "pdf") {
-      setPdfFile(file);
-    } else {
-      setWordFile(file);
-    }
+    setZipFile(file);
   };
 
   const uploadFile = async (file: File, folder: string): Promise<string | null> => {
@@ -83,11 +78,11 @@ export default function Submission() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!pdfFile || !wordFile) {
+    if (!zipFile) {
       toast({
         variant: "destructive",
         title: "File Belum Lengkap",
-        description: "Mohon upload file PDF dan Word",
+        description: "Mohon upload file ZIP/RAR",
       });
       return;
     }
@@ -104,12 +99,9 @@ export default function Submission() {
     setLoading(true);
 
     try {
-      const [pdfUrl, wordUrl] = await Promise.all([
-        uploadFile(pdfFile, "pdf"),
-        uploadFile(wordFile, "word"),
-      ]);
+      const fileUrl = await uploadFile(zipFile, "files");
 
-      if (!pdfUrl || !wordUrl) {
+      if (!fileUrl) {
         throw new Error("Gagal mengupload file");
       }
 
@@ -119,8 +111,7 @@ export default function Submission() {
         nim,
         email,
         jurusan,
-        pdf_url: pdfUrl,
-        word_url: wordUrl,
+        file_url: fileUrl,
       });
 
       if (error) throw error;
@@ -230,40 +221,23 @@ export default function Submission() {
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="pdf">File PDF (wajib)</Label>
+                  <Label htmlFor="file">File Skripsi (ZIP/RAR) - wajib</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Kompres semua file skripsi Anda ke dalam format ZIP atau RAR
+                  </p>
                   <div className="relative">
                     <Input
-                      id="pdf"
+                      id="file"
                       type="file"
-                      accept=".pdf"
-                      onChange={(e) => handleFileChange(e, "pdf")}
+                      accept=".zip,.rar"
+                      onChange={handleFileChange}
                       className="cursor-pointer"
                       required
                     />
-                    {pdfFile && (
+                    {zipFile && (
                       <div className="mt-2 flex items-center gap-2 text-sm text-primary">
-                        <Check className="h-4 w-4" />
-                        {pdfFile.name}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="word">File Word (wajib)</Label>
-                  <div className="relative">
-                    <Input
-                      id="word"
-                      type="file"
-                      accept=".doc,.docx"
-                      onChange={(e) => handleFileChange(e, "word")}
-                      className="cursor-pointer"
-                      required
-                    />
-                    {wordFile && (
-                      <div className="mt-2 flex items-center gap-2 text-sm text-primary">
-                        <Check className="h-4 w-4" />
-                        {wordFile.name}
+                        <Archive className="h-4 w-4" />
+                        {zipFile.name}
                       </div>
                     )}
                   </div>
