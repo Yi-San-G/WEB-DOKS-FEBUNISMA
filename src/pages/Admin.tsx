@@ -29,7 +29,11 @@ import {
   Trash2,
   ExternalLink,
   RotateCcw,
-  X
+  X,
+  Disc,
+  BookOpen,
+  FileCheck,
+  ClipboardList
 } from "lucide-react";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
@@ -38,6 +42,14 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface Submission {
   id: string;
@@ -51,6 +63,9 @@ interface Submission {
   created_at: string;
   file_url: string;
   deleted_at: string | null;
+  softfile_at: string | null;
+  cetak_at: string | null;
+  bebas_pustaka_at: string | null;
 }
 
 const jurusanLabels: Record<string, string> = {
@@ -68,7 +83,7 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedJurusan, setSelectedJurusan] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"pending" | "history" | "trash">("pending");
+  const [activeTab, setActiveTab] = useState<"pending" | "history" | "trash" | "tanggungan">("pending");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [feedbackText, setFeedbackText] = useState<Record<string, string>>({});
   const [sendingFeedback, setSendingFeedback] = useState<string | null>(null);
@@ -76,6 +91,7 @@ export default function Admin() {
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [restoring, setRestoring] = useState<string | null>(null);
+  const [expandedTanggungan, setExpandedTanggungan] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) {
@@ -188,7 +204,10 @@ export default function Admin() {
     try {
       const { error } = await supabase
         .from("submissions")
-        .update({ status: "accepted" })
+        .update({ 
+          status: "accepted",
+          softfile_at: new Date().toISOString() // Auto-set softfile when accepted
+        })
         .eq("id", submission.id);
 
       if (error) throw error;
@@ -338,16 +357,58 @@ export default function Admin() {
     }
   };
 
-  const pendingSubmissions = submissions.filter((s) => (s.status === "pending" || s.status === "reviewed" || s.status === "rejected") && !s.deleted_at);
+  const handleToggleTanggungan = async (submissionId: string, field: "cetak_at" | "bebas_pustaka_at") => {
+    const submission = submissions.find(s => s.id === submissionId);
+    if (!submission) return;
+
+    const currentValue = submission[field];
+    const newValue = currentValue ? null : new Date().toISOString();
+
+    try {
+      const { error } = await supabase
+        .from("submissions")
+        .update({ [field]: newValue })
+        .eq("id", submissionId);
+
+      if (error) throw error;
+
+      toast({
+        title: newValue ? "Ditandai" : "Dibatalkan",
+        description: `Status ${field === "cetak_at" ? "Cetak" : "Bebas Pustaka"} telah ${newValue ? "ditandai" : "dibatalkan"}`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Gagal",
+        description: err.message,
+      });
+    }
+  };
+
+  // Filter submissions
+  const pendingReviewSubmissions = submissions.filter((s) => (s.status === "pending" || s.status === "reviewed") && !s.deleted_at);
+  const rejectedSubmissions = submissions.filter((s) => s.status === "rejected" && !s.deleted_at);
   const acceptedSubmissions = submissions.filter((s) => s.status === "accepted" && !s.deleted_at);
   const trashedSubmissions = submissions.filter((s) => s.deleted_at);
+  
+  // For history: show both accepted and rejected (sorted by updated time)
+  const historySubmissions = submissions
+    .filter((s) => (s.status === "accepted" || s.status === "rejected") && !s.deleted_at)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  // For tanggungan pustaka: only accepted, sorted by name alphabetically
+  const tanggunganSubmissions = [...acceptedSubmissions].sort((a, b) => a.nama.localeCompare(b.nama));
 
   const filteredSubmissions = selectedJurusan
     ? acceptedSubmissions.filter((s) => s.jurusan === selectedJurusan)
     : activeTab === "pending"
-    ? pendingSubmissions
+    ? [] // Will be handled separately with 2-column layout
     : activeTab === "trash"
     ? trashedSubmissions
+    : activeTab === "history"
+    ? historySubmissions
+    : activeTab === "tanggungan"
+    ? tanggunganSubmissions
     : acceptedSubmissions;
 
   if (authLoading || loading) {
@@ -357,6 +418,258 @@ export default function Admin() {
       </div>
     );
   }
+
+  const renderSubmissionCard = (sub: Submission, showRejectedStyle = false) => (
+    <Card 
+      key={sub.id} 
+      className={`shadow-sm overflow-hidden ${
+        showRejectedStyle && sub.status === "rejected" 
+          ? "border-red-300 bg-red-50" 
+          : sub.status === "accepted" 
+          ? "border-green-300 bg-green-50" 
+          : "border-blue-100"
+      }`}
+    >
+      <CardContent className="p-0">
+        {/* Collapsed View */}
+        <div 
+          className={`p-4 cursor-pointer transition-colors ${
+            showRejectedStyle && sub.status === "rejected"
+              ? "hover:bg-red-100"
+              : sub.status === "accepted"
+              ? "hover:bg-green-100"
+              : "hover:bg-slate-50"
+          }`}
+          onClick={() => setExpandedId(expandedId === sub.id ? null : sub.id)}
+        >
+          <div className="flex items-center justify-between">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 flex-1">
+              <div>
+                <p className="text-xs text-muted-foreground">Nama</p>
+                <p className="font-medium">{sub.nama}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">NIM</p>
+                <p className="font-medium">{sub.nim}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Jurusan</p>
+                <p className="font-medium">{jurusanLabels[sub.jurusan]}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Email</p>
+                <p className="font-medium text-sm">{sub.email}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Waktu</p>
+                <p className="font-medium text-sm">
+                  {format(new Date(sub.created_at), "dd MMM yyyy, HH:mm", { locale: id })}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 ml-4">
+              {sub.status === "rejected" && (
+                <Badge variant="destructive">Ditolak</Badge>
+              )}
+              {sub.status === "accepted" && (
+                <Badge className="bg-green-600">Diterima</Badge>
+              )}
+              <Button variant="outline" size="sm">
+                {expandedId === sub.id ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+                Perluas
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Expanded View */}
+        {expandedId === sub.id && (
+          <div className={`p-4 border-t space-y-4 animate-fade-in ${
+            showRejectedStyle && sub.status === "rejected"
+              ? "border-red-200 bg-red-50"
+              : sub.status === "accepted"
+              ? "border-green-200 bg-green-100"
+              : "border-blue-100 bg-slate-50"
+          }`}>
+            {/* File Buttons */}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open(sub.file_url, "_blank")}
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                Lihat File
+              </Button>
+
+              {/* Download button for archived/trash items */}
+              {(sub.status === "accepted" || sub.deleted_at) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDownload(sub.file_url, `${sub.nim}_${sub.nama}.zip`)}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Unduh File
+                </Button>
+              )}
+
+              {/* Trash view - Restore and Permanent Delete */}
+              {sub.deleted_at && (
+                <>
+                  <Button
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700"
+                    onClick={() => handleRestore(sub)}
+                    disabled={restoring === sub.id}
+                  >
+                    {restoring === sub.id ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                    )}
+                    Pulihkan
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => handlePermanentDelete(sub)}
+                    disabled={deleting === sub.id}
+                  >
+                    {deleting === sub.id ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4 mr-2" />
+                    )}
+                    Hapus Permanen
+                  </Button>
+                </>
+              )}
+
+              {/* Archive view - Setorkan and Hapus */}
+              {sub.status === "accepted" && !sub.deleted_at && (
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => window.open("#", "_self")}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Setorkan
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => handleDelete(sub)}
+                    disabled={deleting === sub.id}
+                  >
+                    {deleting === sub.id ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4 mr-2" />
+                    )}
+                    Hapus
+                  </Button>
+                </>
+              )}
+
+              {sub.status !== "accepted" && !sub.deleted_at && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const el = document.getElementById(`feedback-${sub.id}`);
+                      el?.focus();
+                    }}
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Kirim Feedback
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700"
+                    onClick={() => handleAccept(sub)}
+                    disabled={accepting === sub.id}
+                  >
+                    {accepting === sub.id ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Check className="h-4 w-4 mr-2" />
+                    )}
+                    Terima
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => handleReject(sub)}
+                    disabled={rejecting === sub.id}
+                  >
+                    {rejecting === sub.id ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <X className="h-4 w-4 mr-2" />
+                    )}
+                    Tolak
+                  </Button>
+                </>
+              )}
+            </div>
+
+            {/* Feedback Section */}
+            {sub.status !== "accepted" && !sub.deleted_at && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Tulis Feedback:</p>
+                <div className="bg-white p-3 rounded-lg border">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Terima kasih atas data yang Anda kirimkan. Hasil validasi dari admin adalah sebagai berikut:
+                  </p>
+                  <Textarea
+                    id={`feedback-${sub.id}`}
+                    placeholder="Tulis komentar Anda di sini..."
+                    value={feedbackText[sub.id] || ""}
+                    onChange={(e) => 
+                      setFeedbackText((prev) => ({ ...prev, [sub.id]: e.target.value }))
+                    }
+                    rows={3}
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => handleSendFeedback(sub)}
+                  disabled={sendingFeedback === sub.id}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {sendingFeedback === sub.id ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-2" />
+                  )}
+                  Kirim Feedback
+                </Button>
+              </div>
+            )}
+
+            {/* Existing Feedback */}
+            {sub.feedback && (
+              <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
+                <p className="text-xs text-blue-600 mb-1">Feedback yang sudah dikirim:</p>
+                <p className="text-sm whitespace-pre-wrap">{sub.feedback}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  const isAllTanggunganComplete = (sub: Submission) => {
+    return sub.softfile_at && sub.cetak_at && sub.bebas_pustaka_at;
+  };
 
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-blue-50 to-slate-100">
@@ -383,6 +696,20 @@ export default function Admin() {
             >
               <LayoutDashboard className="h-4 w-4 mr-2" />
               {sidebarOpen && "Dashboard"}
+            </Button>
+
+            <Button
+              variant={activeTab === "tanggungan" && !selectedJurusan ? "secondary" : "ghost"}
+              className="w-full justify-start"
+              onClick={() => { setActiveTab("tanggungan"); setSelectedJurusan(null); }}
+            >
+              <ClipboardList className="h-4 w-4 mr-2" />
+              {sidebarOpen && "Tanggungan Pustaka"}
+              {acceptedSubmissions.length > 0 && sidebarOpen && (
+                <Badge className="ml-auto" variant="outline">
+                  {acceptedSubmissions.length}
+                </Badge>
+              )}
             </Button>
 
             <Collapsible>
@@ -455,255 +782,260 @@ export default function Admin() {
         <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 shadow-md">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold">Kelola Submission</h1>
-            <div className="flex items-center gap-2 bg-white/20 rounded-lg px-4 py-2">
-              <Bell className="h-4 w-4" />
-              <span className="text-sm">
-                Terdapat <strong>{pendingSubmissions.length}</strong> mahasiswa menunggu feedback Anda!
-              </span>
+            <div className="flex items-center gap-4">
+              {pendingReviewSubmissions.length > 0 && (
+                <div className="flex items-center gap-2 bg-white/20 rounded-lg px-4 py-2">
+                  <Bell className="h-4 w-4" />
+                  <span className="text-sm">
+                    Terdapat <strong>{pendingReviewSubmissions.length}</strong> mahasiswa menunggu feedback Anda!
+                  </span>
+                </div>
+              )}
+              {rejectedSubmissions.length > 0 && (
+                <div className="flex items-center gap-2 bg-red-500/80 rounded-lg px-4 py-2">
+                  <X className="h-4 w-4" />
+                  <span className="text-sm">
+                    <strong>{rejectedSubmissions.length}</strong> laporan telah ditolak
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </header>
 
         {/* Content */}
         <div className="flex-1 p-6 overflow-auto">
-          <h2 className="text-lg font-semibold mb-4 text-slate-700">
-            {selectedJurusan 
-              ? `Arsip ${jurusanLabels[selectedJurusan]}`
-              : activeTab === "pending" 
-              ? "Submission Menunggu Review" 
-              : activeTab === "trash"
-              ? "Sampah"
-              : "Semua Riwayat"}
-          </h2>
+          {activeTab === "pending" && !selectedJurusan ? (
+            // Two-column layout for pending submissions
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Column - Pending/Reviewed */}
+              <div>
+                <h2 className="text-lg font-semibold mb-4 text-slate-700 flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  Menunggu Review
+                  <Badge variant="secondary">{pendingReviewSubmissions.length}</Badge>
+                </h2>
+                {pendingReviewSubmissions.length === 0 ? (
+                  <Card className="text-center py-12">
+                    <CardContent>
+                      <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground">Tidak ada submission menunggu</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-4">
+                    {pendingReviewSubmissions.map((sub) => renderSubmissionCard(sub))}
+                  </div>
+                )}
+              </div>
 
-          {filteredSubmissions.length === 0 ? (
-            <Card className="text-center py-12">
-              <CardContent>
-                <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Tidak ada data</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {filteredSubmissions.map((sub) => (
-                <Card key={sub.id} className="shadow-sm border-blue-100 overflow-hidden">
-                  <CardContent className="p-0">
-                    {/* Collapsed View */}
-                    <div 
-                      className="p-4 cursor-pointer hover:bg-slate-50 transition-colors"
-                      onClick={() => setExpandedId(expandedId === sub.id ? null : sub.id)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 flex-1">
-                          <div>
-                            <p className="text-xs text-muted-foreground">Nama</p>
-                            <p className="font-medium">{sub.nama}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">NIM</p>
-                            <p className="font-medium">{sub.nim}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Jurusan</p>
-                            <p className="font-medium">{jurusanLabels[sub.jurusan]}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Email</p>
-                            <p className="font-medium text-sm">{sub.email}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Waktu</p>
-                            <p className="font-medium text-sm">
-                              {format(new Date(sub.created_at), "dd MMM yyyy, HH:mm", { locale: id })}
-                            </p>
-                          </div>
-                        </div>
-                        <Button variant="outline" size="sm" className="ml-4">
-                          {expandedId === sub.id ? (
-                            <ChevronUp className="h-4 w-4" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4" />
-                          )}
-                          Perluas
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Expanded View */}
-                    {expandedId === sub.id && (
-                      <div className="p-4 border-t border-blue-100 bg-slate-50 space-y-4 animate-fade-in">
-                        {/* File Buttons */}
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open(sub.file_url, "_blank")}
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            Lihat File
-                          </Button>
-
-                          {/* Download button for archived/trash items */}
-                          {(sub.status === "accepted" || sub.deleted_at) && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDownload(sub.file_url, `${sub.nim}_${sub.nama}.zip`)}
-                            >
-                              <Download className="h-4 w-4 mr-2" />
-                              Unduh File
-                            </Button>
-                          )}
-
-                          {/* Trash view - Restore and Permanent Delete */}
-                          {sub.deleted_at && (
-                            <>
-                              <Button
-                                size="sm"
-                                className="bg-green-600 hover:bg-green-700"
-                                onClick={() => handleRestore(sub)}
-                                disabled={restoring === sub.id}
-                              >
-                                {restoring === sub.id ? (
-                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                ) : (
-                                  <RotateCcw className="h-4 w-4 mr-2" />
-                                )}
-                                Pulihkan
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handlePermanentDelete(sub)}
-                                disabled={deleting === sub.id}
-                              >
-                                {deleting === sub.id ? (
-                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                ) : (
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                )}
-                                Hapus Permanen
-                              </Button>
-                            </>
-                          )}
-
-                          {/* Archive view - Setorkan and Hapus */}
-                          {sub.status === "accepted" && !sub.deleted_at && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => window.open("#", "_self")}
-                              >
-                                <ExternalLink className="h-4 w-4 mr-2" />
-                                Setorkan
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleDelete(sub)}
-                                disabled={deleting === sub.id}
-                              >
-                                {deleting === sub.id ? (
-                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                ) : (
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                )}
-                                Hapus
-                              </Button>
-                            </>
-                          )}
-
-                          {sub.status !== "accepted" && !sub.deleted_at && (
-                            <>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  const el = document.getElementById(`feedback-${sub.id}`);
-                                  el?.focus();
-                                }}
-                              >
-                                <MessageSquare className="h-4 w-4 mr-2" />
-                                Kirim Feedback
-                              </Button>
-                              <Button
-                                size="sm"
-                                className="bg-green-600 hover:bg-green-700"
-                                onClick={() => handleAccept(sub)}
-                                disabled={accepting === sub.id}
-                              >
-                                {accepting === sub.id ? (
-                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                ) : (
-                                  <Check className="h-4 w-4 mr-2" />
-                                )}
-                                Terima
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleReject(sub)}
-                                disabled={rejecting === sub.id}
-                              >
-                                {rejecting === sub.id ? (
-                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                ) : (
-                                  <X className="h-4 w-4 mr-2" />
-                                )}
-                                Tolak
-                              </Button>
-                            </>
-                          )}
-                        </div>
-
-                        {/* Feedback Section */}
-                        {sub.status !== "accepted" && !sub.deleted_at && (
-                          <div className="space-y-2">
-                            <p className="text-sm font-medium">Tulis Feedback:</p>
-                            <div className="bg-white p-3 rounded-lg border">
-                              <p className="text-sm text-muted-foreground mb-2">
-                                Terima kasih atas data yang Anda kirimkan. Hasil validasi dari admin adalah sebagai berikut:
-                              </p>
-                              <Textarea
-                                id={`feedback-${sub.id}`}
-                                placeholder="Tulis komentar Anda di sini..."
-                                value={feedbackText[sub.id] || ""}
-                                onChange={(e) => 
-                                  setFeedbackText((prev) => ({ ...prev, [sub.id]: e.target.value }))
-                                }
-                                rows={3}
-                              />
-                            </div>
-                            <Button
-                              size="sm"
-                              onClick={() => handleSendFeedback(sub)}
-                              disabled={sendingFeedback === sub.id}
-                              className="bg-blue-600 hover:bg-blue-700"
-                            >
-                              {sendingFeedback === sub.id ? (
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              ) : (
-                                <Send className="h-4 w-4 mr-2" />
-                              )}
-                              Kirim Feedback
-                            </Button>
-                          </div>
-                        )}
-
-                        {/* Existing Feedback */}
-                        {sub.feedback && (
-                          <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
-                            <p className="text-xs text-blue-600 mb-1">Feedback yang sudah dikirim:</p>
-                            <p className="text-sm whitespace-pre-wrap">{sub.feedback}</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
+              {/* Right Column - Rejected */}
+              <div>
+                <h2 className="text-lg font-semibold mb-4 text-red-600 flex items-center gap-2">
+                  <X className="h-5 w-5" />
+                  Laporan Ditolak
+                  <Badge variant="destructive">{rejectedSubmissions.length}</Badge>
+                </h2>
+                {rejectedSubmissions.length === 0 ? (
+                  <Card className="text-center py-12 border-red-200">
+                    <CardContent>
+                      <FileText className="h-12 w-12 mx-auto text-red-300 mb-4" />
+                      <p className="text-muted-foreground">Tidak ada laporan ditolak</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-4">
+                    {rejectedSubmissions.map((sub) => renderSubmissionCard(sub, true))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : activeTab === "tanggungan" && !selectedJurusan ? (
+            // Tanggungan Pustaka View
+            <div>
+              <h2 className="text-lg font-semibold mb-4 text-slate-700 flex items-center gap-2">
+                <ClipboardList className="h-5 w-5" />
+                Tanggungan Pustaka
+              </h2>
+              {tanggunganSubmissions.length === 0 ? (
+                <Card className="text-center py-12">
+                  <CardContent>
+                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">Belum ada data tanggungan</p>
                   </CardContent>
                 </Card>
-              ))}
+              ) : (
+                <Card>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>No</TableHead>
+                        <TableHead>Nama</TableHead>
+                        <TableHead>NIM</TableHead>
+                        <TableHead>Jurusan</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead className="text-center">
+                          <div className="flex flex-col items-center">
+                            <Disc className="h-4 w-4 mb-1" />
+                            <span className="text-xs">Softfile</span>
+                          </div>
+                        </TableHead>
+                        <TableHead className="text-center">
+                          <div className="flex flex-col items-center">
+                            <BookOpen className="h-4 w-4 mb-1" />
+                            <span className="text-xs">Cetak</span>
+                          </div>
+                        </TableHead>
+                        <TableHead className="text-center">
+                          <div className="flex flex-col items-center">
+                            <FileCheck className="h-4 w-4 mb-1" />
+                            <span className="text-xs">Bebas Pustaka</span>
+                          </div>
+                        </TableHead>
+                        <TableHead className="text-center">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {tanggunganSubmissions.map((sub, index) => (
+                        <>
+                          <TableRow key={sub.id} className="hover:bg-slate-50">
+                            <TableCell>{index + 1}</TableCell>
+                            <TableCell className="font-medium">{sub.nama}</TableCell>
+                            <TableCell>{sub.nim}</TableCell>
+                            <TableCell>{jurusanLabels[sub.jurusan]}</TableCell>
+                            <TableCell className="text-sm">{sub.email}</TableCell>
+                            <TableCell className="text-center">
+                              <button
+                                className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center transition-colors ${
+                                  sub.softfile_at 
+                                    ? "bg-green-500 border-green-600 text-white" 
+                                    : "bg-white border-gray-300 text-gray-400"
+                                }`}
+                                disabled
+                                title="Otomatis terisi saat diterima"
+                              >
+                                <Disc className="h-5 w-5" />
+                              </button>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <button
+                                onClick={() => handleToggleTanggungan(sub.id, "cetak_at")}
+                                className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center transition-colors cursor-pointer hover:opacity-80 ${
+                                  sub.cetak_at 
+                                    ? "bg-green-500 border-green-600 text-white" 
+                                    : "bg-white border-gray-300 text-gray-400 hover:border-green-400"
+                                }`}
+                                title={sub.cetak_at ? "Klik untuk membatalkan" : "Klik untuk menandai"}
+                              >
+                                <BookOpen className="h-5 w-5" />
+                              </button>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <button
+                                onClick={() => handleToggleTanggungan(sub.id, "bebas_pustaka_at")}
+                                className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center transition-colors cursor-pointer hover:opacity-80 ${
+                                  sub.bebas_pustaka_at 
+                                    ? "bg-green-500 border-green-600 text-white" 
+                                    : "bg-white border-gray-300 text-gray-400 hover:border-green-400"
+                                }`}
+                                title={sub.bebas_pustaka_at ? "Klik untuk membatalkan" : "Klik untuk menandai"}
+                              >
+                                <FileCheck className="h-5 w-5" />
+                              </button>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {isAllTanggunganComplete(sub) ? (
+                                <button
+                                  onClick={() => setExpandedTanggungan(expandedTanggungan === sub.id ? null : sub.id)}
+                                  className="px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-colors flex items-center gap-2 mx-auto"
+                                >
+                                  <Check className="h-4 w-4" />
+                                  Selesai
+                                  {expandedTanggungan === sub.id ? (
+                                    <ChevronUp className="h-4 w-4" />
+                                  ) : (
+                                    <ChevronDown className="h-4 w-4" />
+                                  )}
+                                </button>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">Belum lengkap</span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                          {expandedTanggungan === sub.id && isAllTanggunganComplete(sub) && (
+                            <TableRow>
+                              <TableCell colSpan={9} className="bg-green-50 border-t-0">
+                                <div className="p-4 space-y-2">
+                                  <p className="font-medium text-green-700">Waktu Penyelesaian:</p>
+                                  <div className="grid grid-cols-3 gap-4 text-sm">
+                                    <div className="flex items-center gap-2">
+                                      <Disc className="h-4 w-4 text-green-600" />
+                                      <span>Softfile: {sub.softfile_at && format(new Date(sub.softfile_at), "dd MMM yyyy, HH:mm", { locale: id })}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <BookOpen className="h-4 w-4 text-green-600" />
+                                      <span>Cetak: {sub.cetak_at && format(new Date(sub.cetak_at), "dd MMM yyyy, HH:mm", { locale: id })}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <FileCheck className="h-4 w-4 text-green-600" />
+                                      <span>Bebas Pustaka: {sub.bebas_pustaka_at && format(new Date(sub.bebas_pustaka_at), "dd MMM yyyy, HH:mm", { locale: id })}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </Card>
+              )}
             </div>
+          ) : activeTab === "history" && !selectedJurusan ? (
+            // History/Log View
+            <div>
+              <h2 className="text-lg font-semibold mb-4 text-slate-700 flex items-center gap-2">
+                <History className="h-5 w-5" />
+                Riwayat Aktivitas
+              </h2>
+              {historySubmissions.length === 0 ? (
+                <Card className="text-center py-12">
+                  <CardContent>
+                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">Belum ada riwayat</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {historySubmissions.map((sub) => renderSubmissionCard(sub, true))}
+                </div>
+              )}
+            </div>
+          ) : (
+            // Default view for other tabs
+            <>
+              <h2 className="text-lg font-semibold mb-4 text-slate-700">
+                {selectedJurusan 
+                  ? `Arsip ${jurusanLabels[selectedJurusan]}`
+                  : activeTab === "trash"
+                  ? "Sampah"
+                  : "Semua Data"}
+              </h2>
+
+              {filteredSubmissions.length === 0 ? (
+                <Card className="text-center py-12">
+                  <CardContent>
+                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">Tidak ada data</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {filteredSubmissions.map((sub) => renderSubmissionCard(sub, true))}
+                </div>
+              )}
+            </>
           )}
         </div>
 
