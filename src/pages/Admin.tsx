@@ -442,46 +442,50 @@ export default function Admin() {
           }`}
           onClick={() => setExpandedId(expandedId === sub.id ? null : sub.id)}
         >
-          <div className="flex items-center justify-between">
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 flex-1">
-              <div>
-                <p className="text-xs text-muted-foreground">Nama</p>
-                <p className="font-medium">{sub.nama}</p>
+        <div className="flex flex-col gap-3">
+            {/* Info Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground mb-0.5">Nama</p>
+                <p className="font-medium truncate">{sub.nama}</p>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">NIM</p>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground mb-0.5">NIM</p>
                 <p className="font-medium">{sub.nim}</p>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Jurusan</p>
-                <p className="font-medium">{jurusanLabels[sub.jurusan]}</p>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground mb-0.5">Jurusan</p>
+                <p className="font-medium truncate">{jurusanLabels[sub.jurusan]}</p>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Email</p>
-                <p className="font-medium text-sm">{sub.email}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Waktu</p>
-                <p className="font-medium text-sm">
-                  {format(new Date(sub.created_at), "dd MMM yyyy, HH:mm", { locale: id })}
-                </p>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground mb-0.5">Email</p>
+                <p className="font-medium text-sm truncate">{sub.email}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 ml-4">
-              {sub.status === "rejected" && (
-                <Badge variant="destructive">Ditolak</Badge>
-              )}
-              {sub.status === "accepted" && (
-                <Badge className="bg-green-600">Diterima</Badge>
-              )}
-              <Button variant="outline" size="sm">
-                {expandedId === sub.id ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
+            {/* Footer Row */}
+            <div className="flex items-center justify-between pt-2 border-t border-border/50">
+              <div className="flex items-center gap-2">
+                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">
+                  {format(new Date(sub.created_at), "dd MMM yyyy, HH:mm", { locale: id })}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                {sub.status === "rejected" && (
+                  <Badge variant="destructive">Ditolak</Badge>
                 )}
-                Perluas
-              </Button>
+                {sub.status === "accepted" && (
+                  <Badge className="bg-green-600">Diterima</Badge>
+                )}
+                <Button variant="outline" size="sm">
+                  {expandedId === sub.id ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                  Perluas
+                </Button>
+              </div>
             </div>
           </div>
         </div>
