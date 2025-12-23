@@ -49,6 +49,8 @@ export type Database = {
       }
       submissions: {
         Row: {
+          bebas_pustaka_at: string | null
+          cetak_at: string | null
           created_at: string
           deleted_at: string | null
           email: string
@@ -58,11 +60,14 @@ export type Database = {
           jurusan: Database["public"]["Enums"]["jurusan_type"]
           nama: string
           nim: string
+          softfile_at: string | null
           status: Database["public"]["Enums"]["submission_status"]
           updated_at: string
           user_id: string
         }
         Insert: {
+          bebas_pustaka_at?: string | null
+          cetak_at?: string | null
           created_at?: string
           deleted_at?: string | null
           email: string
@@ -72,11 +77,14 @@ export type Database = {
           jurusan: Database["public"]["Enums"]["jurusan_type"]
           nama: string
           nim: string
+          softfile_at?: string | null
           status?: Database["public"]["Enums"]["submission_status"]
           updated_at?: string
           user_id: string
         }
         Update: {
+          bebas_pustaka_at?: string | null
+          cetak_at?: string | null
           created_at?: string
           deleted_at?: string | null
           email?: string
@@ -86,6 +94,7 @@ export type Database = {
           jurusan?: Database["public"]["Enums"]["jurusan_type"]
           nama?: string
           nim?: string
+          softfile_at?: string | null
           status?: Database["public"]["Enums"]["submission_status"]
           updated_at?: string
           user_id?: string
