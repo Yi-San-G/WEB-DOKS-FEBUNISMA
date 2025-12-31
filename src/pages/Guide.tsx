@@ -2,15 +2,10 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, FileText, Upload, CheckCircle, Clock, HelpCircle } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-
 export default function Guide() {
-  return (
-    <div className="min-h-screen bg-background islamic-pattern py-8 px-4">
+  return <div className="min-h-screen bg-background islamic-pattern py-8 px-4">
       <div className="container max-w-3xl mx-auto">
-        <Link 
-          to="/" 
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary mb-6 transition-colors"
-        >
+        <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary mb-6 transition-colors">
           <ArrowLeft className="h-4 w-4" />
           Kembali ke Beranda
         </Link>
@@ -76,8 +71,7 @@ export default function Guide() {
                   </div>
                   <div>
                     <h4 className="font-medium mb-1">Upload File</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Upload file skripsi dalam format <strong>PDF</strong> dan <strong>Word (.doc/.docx)</strong>. Kedua file wajib diisi.
+                    <p className="text-sm text-muted-foreground">Upload file skripsi dalam format ZIP/rar. file wajib diisi.<strong>PDF</strong> dan <strong>Word (.doc/.docx)</strong>. Kedua file wajib diisi.
                     </p>
                   </div>
                 </div>
@@ -172,6 +166,5 @@ export default function Guide() {
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    </div>;
 }
