@@ -1,37 +1,28 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
 import { signOut } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Menu, 
-  FileText, 
-  User, 
-  Shield, 
-  BookOpen, 
-  LogOut,
-  GraduationCap,
-  Sparkles
-} from "lucide-react";
-
+import { Menu, FileText, User, Shield, BookOpen, LogOut, GraduationCap, Sparkles } from "lucide-react";
 export default function Index() {
-  const { user, profile, isAdmin } = useAuth();
-  const { toast } = useToast();
-
+  const {
+    user,
+    profile,
+    isAdmin
+  } = useAuth();
+  const {
+    toast
+  } = useToast();
   const handleLogout = async () => {
     await signOut();
-    toast({ title: "Berhasil", description: "Anda telah keluar" });
+    toast({
+      title: "Berhasil",
+      description: "Anda telah keluar"
+    });
   };
-
-  return (
-    <div className="min-h-screen flex flex-col bg-background">
+  return <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
       <header className="w-full gradient-islamic text-primary-foreground py-4 px-6 shadow-lg">
         <div className="container mx-auto flex items-center justify-between">
@@ -39,7 +30,8 @@ export default function Index() {
             <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
               <GraduationCap className="h-6 w-6" />
             </div>
-            <span className="font-semibold text-lg hidden sm:block">E-Submission</span>
+            <span className="font-semibold text-lg hidden sm:block">DOKS
+          </span>
           </div>
 
           <DropdownMenu>
@@ -49,22 +41,19 @@ export default function Index() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              {user ? (
-                <>
+              {user ? <>
                   <DropdownMenuItem asChild>
                     <Link to="/profil" className="flex items-center gap-2 cursor-pointer">
                       <User className="h-4 w-4" />
                       Profil Saya
                     </Link>
                   </DropdownMenuItem>
-                  {isAdmin && (
-                    <DropdownMenuItem asChild>
+                  {isAdmin && <DropdownMenuItem asChild>
                       <Link to="/admin" className="flex items-center gap-2 cursor-pointer">
                         <Shield className="h-4 w-4" />
                         Panel Admin
                       </Link>
-                    </DropdownMenuItem>
-                  )}
+                    </DropdownMenuItem>}
                   <DropdownMenuItem asChild>
                     <Link to="/panduan" className="flex items-center gap-2 cursor-pointer">
                       <BookOpen className="h-4 w-4" />
@@ -75,9 +64,7 @@ export default function Index() {
                     <LogOut className="h-4 w-4" />
                     Keluar
                   </DropdownMenuItem>
-                </>
-              ) : (
-                <>
+                </> : <>
                   <DropdownMenuItem asChild>
                     <Link to="/auth" className="flex items-center gap-2 cursor-pointer">
                       <User className="h-4 w-4" />
@@ -96,8 +83,7 @@ export default function Index() {
                       Panduan
                     </Link>
                   </DropdownMenuItem>
-                </>
-              )}
+                </>}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -117,7 +103,7 @@ export default function Index() {
           {/* Main Title */}
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-6 leading-tight">
             Selamat Datang di Website
-            <span className="block text-primary mt-2">E-Submission Skripsi</span>
+            <span className="block text-primary mt-2">DOKS</span>
           </h1>
 
           <p className="text-muted-foreground text-lg mb-12 max-w-xl mx-auto">
@@ -126,20 +112,15 @@ export default function Index() {
 
           {/* Entry Skripsi Button */}
           <Link to={user ? "/submission" : "/auth"}>
-            <Button 
-              size="lg" 
-              className="gradient-islamic hover:opacity-90 transition-all text-lg px-8 py-6 h-auto rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-            >
+            <Button size="lg" className="gradient-islamic hover:opacity-90 transition-all text-lg px-8 py-6 h-auto rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1">
               <FileText className="mr-2 h-5 w-5" />
               Entry Skripsi
             </Button>
           </Link>
 
-          {user && profile && (
-            <p className="mt-6 text-sm text-muted-foreground">
+          {user && profile && <p className="mt-6 text-sm text-muted-foreground">
               Selamat datang kembali, <span className="font-medium text-primary">{profile.nama}</span>
-            </p>
-          )}
+            </p>}
         </div>
       </main>
 
@@ -151,6 +132,5 @@ export default function Index() {
           <p className="text-xs opacity-70 mt-2">© 2024 E-Submission Skripsi. All rights reserved.</p>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 }
