@@ -234,16 +234,20 @@ export default function Admin() {
     setRejecting(submission.id);
 
     try {
+      // Reject and auto-move to trash
       const { error } = await supabase
         .from("submissions")
-        .update({ status: "rejected" })
+        .update({ 
+          status: "rejected",
+          deleted_at: new Date().toISOString() // Auto-move to trash
+        })
         .eq("id", submission.id);
 
       if (error) throw error;
 
       toast({
         title: "Ditolak",
-        description: `Submission dari ${submission.nama} telah ditolak`,
+        description: `Submission dari ${submission.nama} telah ditolak dan dipindahkan ke Sampah`,
         variant: "destructive",
       });
     } catch (err: any) {
@@ -390,7 +394,6 @@ export default function Admin() {
 
   // Filter submissions
   const pendingReviewSubmissions = submissions.filter((s) => (s.status === "pending" || s.status === "reviewed") && !s.deleted_at);
-  const rejectedSubmissions = submissions.filter((s) => s.status === "rejected" && !s.deleted_at);
   const acceptedSubmissions = submissions.filter((s) => s.status === "accepted" && !s.deleted_at);
   const trashedSubmissions = submissions.filter((s) => s.deleted_at);
   
@@ -433,27 +436,51 @@ export default function Admin() {
     );
   }
 
-  const renderSubmissionCard = (sub: Submission, showRejectedStyle = false) => (
+  // Helper to get card style based on status and trash state
+  const getCardStyle = (sub: Submission, isTrashView = false) => {
+    if (isTrashView && sub.deleted_at) {
+      // In trash: red for rejected, orange for accepted (deleted from archive)
+      if (sub.status === "rejected") {
+        return "border-red-400 bg-red-100";
+      } else if (sub.status === "accepted") {
+        return "border-orange-400 bg-orange-100";
+      }
+    }
+    if (sub.status === "rejected") {
+      return "border-red-300 bg-red-50";
+    }
+    if (sub.status === "accepted") {
+      return "border-green-300 bg-green-50";
+    }
+    return "border-blue-100";
+  };
+
+  const getCardHoverStyle = (sub: Submission, isTrashView = false) => {
+    if (isTrashView && sub.deleted_at) {
+      if (sub.status === "rejected") {
+        return "hover:bg-red-200";
+      } else if (sub.status === "accepted") {
+        return "hover:bg-orange-200";
+      }
+    }
+    if (sub.status === "rejected") {
+      return "hover:bg-red-100";
+    }
+    if (sub.status === "accepted") {
+      return "hover:bg-green-100";
+    }
+    return "hover:bg-slate-50";
+  };
+
+  const renderSubmissionCard = (sub: Submission, showRejectedStyle = false, isTrashView = false) => (
     <Card 
       key={sub.id} 
-      className={`shadow-sm overflow-hidden ${
-        showRejectedStyle && sub.status === "rejected" 
-          ? "border-red-300 bg-red-50" 
-          : sub.status === "accepted" 
-          ? "border-green-300 bg-green-50" 
-          : "border-blue-100"
-      }`}
+      className={`shadow-sm overflow-hidden ${getCardStyle(sub, isTrashView)}`}
     >
       <CardContent className="p-0">
         {/* Collapsed View */}
         <div 
-          className={`p-4 cursor-pointer transition-colors ${
-            showRejectedStyle && sub.status === "rejected"
-              ? "hover:bg-red-100"
-              : sub.status === "accepted"
-              ? "hover:bg-green-100"
-              : "hover:bg-slate-50"
-          }`}
+          className={`p-4 cursor-pointer transition-colors ${getCardHoverStyle(sub, isTrashView)}`}
           onClick={() => setExpandedId(expandedId === sub.id ? null : sub.id)}
         >
         <div className="flex flex-col gap-3">
@@ -485,10 +512,16 @@ export default function Admin() {
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                {sub.status === "rejected" && (
+                {sub.deleted_at && sub.status === "rejected" && (
                   <Badge variant="destructive">Ditolak</Badge>
                 )}
-                {sub.status === "accepted" && (
+                {sub.deleted_at && sub.status === "accepted" && (
+                  <Badge className="bg-orange-500">Dihapus dari Arsip</Badge>
+                )}
+                {!sub.deleted_at && sub.status === "rejected" && (
+                  <Badge variant="destructive">Ditolak</Badge>
+                )}
+                {!sub.deleted_at && sub.status === "accepted" && (
                   <Badge className="bg-green-600">Diterima</Badge>
                 )}
                 <Button variant="outline" size="sm">
@@ -809,11 +842,11 @@ export default function Admin() {
                   </span>
                 </div>
               )}
-              {rejectedSubmissions.length > 0 && (
+              {trashedSubmissions.filter(s => s.status === "rejected").length > 0 && (
                 <div className="flex items-center gap-2 bg-red-500/80 rounded-lg px-4 py-2">
-                  <X className="h-4 w-4" />
+                  <Trash2 className="h-4 w-4" />
                   <span className="text-sm">
-                    <strong>{rejectedSubmissions.length}</strong> laporan telah ditolak
+                    <strong>{trashedSubmissions.filter(s => s.status === "rejected").length}</strong> laporan ditolak di Sampah
                   </span>
                 </div>
               )}
@@ -824,49 +857,25 @@ export default function Admin() {
         {/* Content */}
         <div className="flex-1 p-6 overflow-auto">
           {activeTab === "pending" && !selectedJurusan ? (
-            // Two-column layout for pending submissions
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Left Column - Pending/Reviewed */}
-              <div>
-                <h2 className="text-lg font-semibold mb-4 text-slate-700 flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  Menunggu Review
-                  <Badge variant="secondary">{pendingReviewSubmissions.length}</Badge>
-                </h2>
-                {pendingReviewSubmissions.length === 0 ? (
-                  <Card className="text-center py-12">
-                    <CardContent>
-                      <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground">Tidak ada submission menunggu</p>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="space-y-4">
-                    {pendingReviewSubmissions.map((sub) => renderSubmissionCard(sub))}
-                  </div>
-                )}
-              </div>
-
-              {/* Right Column - Rejected */}
-              <div>
-                <h2 className="text-lg font-semibold mb-4 text-red-600 flex items-center gap-2">
-                  <X className="h-5 w-5" />
-                  Laporan Ditolak
-                  <Badge variant="destructive">{rejectedSubmissions.length}</Badge>
-                </h2>
-                {rejectedSubmissions.length === 0 ? (
-                  <Card className="text-center py-12 border-red-200">
-                    <CardContent>
-                      <FileText className="h-12 w-12 mx-auto text-red-300 mb-4" />
-                      <p className="text-muted-foreground">Tidak ada laporan ditolak</p>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="space-y-4">
-                    {rejectedSubmissions.map((sub) => renderSubmissionCard(sub, true))}
-                  </div>
-                )}
-              </div>
+            // Single column layout for pending submissions
+            <div>
+              <h2 className="text-lg font-semibold mb-4 text-slate-700 flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Menunggu Review
+                <Badge variant="secondary">{pendingReviewSubmissions.length}</Badge>
+              </h2>
+              {pendingReviewSubmissions.length === 0 ? (
+                <Card className="text-center py-12">
+                  <CardContent>
+                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">Tidak ada submission menunggu</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {pendingReviewSubmissions.map((sub) => renderSubmissionCard(sub))}
+                </div>
+              )}
             </div>
           ) : activeTab === "tanggungan" && !selectedJurusan ? (
             // Bebas Pustaka View
@@ -1064,7 +1073,7 @@ export default function Admin() {
                 </Card>
               ) : (
                 <div className="space-y-4">
-                  {filteredSubmissions.map((sub) => renderSubmissionCard(sub, true))}
+                  {filteredSubmissions.map((sub) => renderSubmissionCard(sub, true, activeTab === "trash"))}
                 </div>
               )}
             </>
