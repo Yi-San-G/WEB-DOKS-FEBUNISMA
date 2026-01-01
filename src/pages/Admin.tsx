@@ -33,8 +33,10 @@ import {
   Disc,
   BookOpen,
   FileCheck,
-  ClipboardList
+  ClipboardList,
+  Search
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import {
@@ -92,6 +94,7 @@ export default function Admin() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [restoring, setRestoring] = useState<string | null>(null);
   const [expandedTanggungan, setExpandedTanggungan] = useState<string | null>(null);
+  const [bebasPustakaSearch, setBebasPustakaSearch] = useState("");
 
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) {
@@ -396,8 +399,19 @@ export default function Admin() {
     .filter((s) => (s.status === "accepted" || s.status === "rejected") && !s.deleted_at)
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-  // For tanggungan pustaka: only accepted, sorted by name alphabetically
-  const tanggunganSubmissions = [...acceptedSubmissions].sort((a, b) => a.nama.localeCompare(b.nama));
+  // For bebas pustaka: only accepted, sorted by name alphabetically, with search filter
+  const bebasPustakaSubmissions = [...acceptedSubmissions]
+    .filter((s) => {
+      if (!bebasPustakaSearch.trim()) return true;
+      const searchLower = bebasPustakaSearch.toLowerCase();
+      return (
+        s.nama.toLowerCase().includes(searchLower) ||
+        s.nim.toLowerCase().includes(searchLower) ||
+        s.email.toLowerCase().includes(searchLower) ||
+        jurusanLabels[s.jurusan]?.toLowerCase().includes(searchLower)
+      );
+    })
+    .sort((a, b) => a.nama.localeCompare(b.nama));
 
   const filteredSubmissions = selectedJurusan
     ? acceptedSubmissions.filter((s) => s.jurusan === selectedJurusan)
@@ -408,7 +422,7 @@ export default function Admin() {
     : activeTab === "history"
     ? historySubmissions
     : activeTab === "tanggungan"
-    ? tanggunganSubmissions
+    ? bebasPustakaSubmissions
     : acceptedSubmissions;
 
   if (authLoading || loading) {
@@ -708,7 +722,7 @@ export default function Admin() {
               onClick={() => { setActiveTab("tanggungan"); setSelectedJurusan(null); }}
             >
               <ClipboardList className="h-4 w-4 mr-2" />
-              {sidebarOpen && "Tanggungan Pustaka"}
+              {sidebarOpen && "Bebas Pustaka"}
               {acceptedSubmissions.length > 0 && sidebarOpen && (
                 <Badge className="ml-auto" variant="outline">
                   {acceptedSubmissions.length}
@@ -855,17 +869,31 @@ export default function Admin() {
               </div>
             </div>
           ) : activeTab === "tanggungan" && !selectedJurusan ? (
-            // Tanggungan Pustaka View
+            // Bebas Pustaka View
             <div>
-              <h2 className="text-lg font-semibold mb-4 text-slate-700 flex items-center gap-2">
-                <ClipboardList className="h-5 w-5" />
-                Tanggungan Pustaka
-              </h2>
-              {tanggunganSubmissions.length === 0 ? (
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                <h2 className="text-lg font-semibold text-slate-700 flex items-center gap-2">
+                  <ClipboardList className="h-5 w-5" />
+                  Bebas Pustaka
+                </h2>
+                <div className="relative w-full sm:w-80">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Cari nama, NIM, email, atau jurusan..."
+                    value={bebasPustakaSearch}
+                    onChange={(e) => setBebasPustakaSearch(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              {bebasPustakaSubmissions.length === 0 ? (
                 <Card className="text-center py-12">
                   <CardContent>
                     <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">Belum ada data tanggungan</p>
+                    <p className="text-muted-foreground">
+                      {bebasPustakaSearch.trim() ? "Tidak ada hasil pencarian" : "Belum ada data bebas pustaka"}
+                    </p>
                   </CardContent>
                 </Card>
               ) : (
@@ -900,7 +928,7 @@ export default function Admin() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {tanggunganSubmissions.map((sub, index) => (
+                      {bebasPustakaSubmissions.map((sub, index) => (
                         <>
                           <TableRow key={sub.id} className="hover:bg-slate-50">
                             <TableCell>{index + 1}</TableCell>
