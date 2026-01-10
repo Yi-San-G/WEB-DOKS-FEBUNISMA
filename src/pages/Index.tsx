@@ -107,7 +107,7 @@ export default function Index() {
           </h1>
 
           <p className="text-muted-foreground text-lg mb-12 max-w-xl mx-auto">
-            Platform pengajuan dan pengelolaan skripsi dengan mudah, cepat, dan terpercaya
+            Deposit Online Karya Skripsi FEB UNSIMA
           </p>
 
           {/* Entry Skripsi Button */}
