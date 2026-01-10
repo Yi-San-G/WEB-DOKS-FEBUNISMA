@@ -6,6 +6,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { signOut } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Menu, FileText, User, Shield, BookOpen, LogOut, GraduationCap, Sparkles } from "lucide-react";
+import logoUnisma from "@/assets/logo-unisma.png";
+
 export default function Index() {
   const {
     user,
@@ -90,7 +92,17 @@ export default function Index() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center justify-center p-6 islamic-pattern">
+      <main className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+        {/* Logo Background */}
+        <div 
+          className="absolute inset-0 opacity-10 pointer-events-none"
+          style={{
+            backgroundImage: `url(${logoUnisma})`,
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'center',
+            backgroundSize: '50%'
+          }}
+        />
         <div className="text-center max-w-3xl mx-auto animate-fade-in">
           {/* Decorative Element */}
           <div className="mb-8">
