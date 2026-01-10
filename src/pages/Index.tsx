@@ -95,12 +95,12 @@ export default function Index() {
       <main className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden">
         {/* Logo Background */}
         <div 
-          className="absolute inset-0 opacity-10 pointer-events-none"
+          className="absolute inset-0 opacity-25 pointer-events-none"
           style={{
             backgroundImage: `url(${logoUnisma})`,
             backgroundRepeat: 'no-repeat',
             backgroundPosition: 'center',
-            backgroundSize: '50%'
+            backgroundSize: '60%'
           }}
         />
         <div className="text-center max-w-3xl mx-auto animate-fade-in">
