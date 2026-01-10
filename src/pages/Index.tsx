@@ -7,6 +7,7 @@ import { signOut } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Menu, FileText, User, Shield, BookOpen, LogOut, GraduationCap, Sparkles } from "lucide-react";
 import logoUnisma from "@/assets/logo-unisma.png";
+import { AnimatedText, AnimatedLetter, AnimatedWord } from "@/components/AnimatedText";
 
 export default function Index() {
   const {
@@ -104,21 +105,21 @@ export default function Index() {
 
           {/* Main Title */}
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4 leading-tight">
-            Selamat Datang di Website
+            <AnimatedText text="Selamat Datang di Website" />
             <span className="block mt-2">
-              <span className="text-primary">D</span>
-              <span className="text-accent">O</span>
-              <span className="text-primary">K</span>
-              <span className="text-accent">S</span>
+              <AnimatedLetter letter="D" className="text-primary" />
+              <AnimatedLetter letter="O" className="text-accent" />
+              <AnimatedLetter letter="K" className="text-primary" />
+              <AnimatedLetter letter="S" className="text-accent" />
             </span>
           </h1>
 
           <p className="text-lg mb-6 max-w-xl mx-auto">
-            <span className="text-primary font-semibold">Deposit</span>{" "}
-            <span className="text-accent font-semibold">Online</span>{" "}
-            <span className="text-primary font-semibold">Karya</span>{" "}
-            <span className="text-accent font-semibold">Skripsi</span>{" "}
-            <span className="text-muted-foreground">FEB UNSIMA</span>
+            <AnimatedWord word="Deposit" className="text-primary font-semibold" />{" "}
+            <AnimatedWord word="Online" className="text-accent font-semibold" />{" "}
+            <AnimatedWord word="Karya" className="text-primary font-semibold" />{" "}
+            <AnimatedWord word="Skripsi" className="text-accent font-semibold" />{" "}
+            <AnimatedText text="FEB UNSIMA" className="text-muted-foreground" />
           </p>
 
           {/* Logo UNISMA */}
