@@ -92,20 +92,10 @@ export default function Index() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden">
-        {/* Logo Background */}
-        <div 
-          className="absolute inset-0 opacity-25 pointer-events-none"
-          style={{
-            backgroundImage: `url(${logoUnisma})`,
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'center',
-            backgroundSize: '60%'
-          }}
-        />
+      <main className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden bg-background">
         <div className="text-center max-w-3xl mx-auto animate-fade-in">
           {/* Decorative Element */}
-          <div className="mb-8">
+          <div className="mb-6">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary text-secondary-foreground text-sm font-medium">
               <Sparkles className="h-4 w-4" />
               Optimalisasi Validator
@@ -113,14 +103,32 @@ export default function Index() {
           </div>
 
           {/* Main Title */}
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-6 leading-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4 leading-tight">
             Selamat Datang di Website
-            <span className="block text-primary mt-2">DOKS</span>
+            <span className="block mt-2">
+              <span className="text-primary">D</span>
+              <span className="text-accent">O</span>
+              <span className="text-primary">K</span>
+              <span className="text-accent">S</span>
+            </span>
           </h1>
 
-          <p className="text-muted-foreground text-lg mb-12 max-w-xl mx-auto">
-            Deposit Online Karya Skripsi FEB UNSIMA
+          <p className="text-lg mb-6 max-w-xl mx-auto">
+            <span className="text-primary font-semibold">Deposit</span>{" "}
+            <span className="text-accent font-semibold">Online</span>{" "}
+            <span className="text-primary font-semibold">Karya</span>{" "}
+            <span className="text-accent font-semibold">Skripsi</span>{" "}
+            <span className="text-muted-foreground">FEB UNSIMA</span>
           </p>
+
+          {/* Logo UNISMA */}
+          <div className="mb-8">
+            <img 
+              src={logoUnisma} 
+              alt="Logo UNISMA" 
+              className="h-32 sm:h-40 md:h-48 mx-auto object-contain"
+            />
+          </div>
 
           {/* Entry Skripsi Button */}
           <Link to={user ? "/submission" : "/auth"}>
