@@ -343,9 +343,45 @@ export default function Admin() {
     }
   };
 
-  const handleDownload = async (url: string, filename: string) => {
+  // Generate signed URL for secure file access
+  const getSignedUrl = async (filePath: string): Promise<string | null> => {
     try {
-      const response = await fetch(url);
+      const { data, error } = await supabase.storage
+        .from("submissions")
+        .createSignedUrl(filePath, 3600); // 1 hour expiry
+
+      if (error) {
+        console.error("Error creating signed URL:", error);
+        return null;
+      }
+      return data.signedUrl;
+    } catch (err) {
+      console.error("Error getting signed URL:", err);
+      return null;
+    }
+  };
+
+  const handleViewFile = async (filePath: string) => {
+    const signedUrl = await getSignedUrl(filePath);
+    if (signedUrl) {
+      window.open(signedUrl, "_blank");
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Gagal",
+        description: "Gagal membuka file. Silakan coba lagi.",
+      });
+    }
+  };
+
+  const handleDownload = async (filePath: string, filename: string) => {
+    try {
+      const signedUrl = await getSignedUrl(filePath);
+      if (!signedUrl) {
+        throw new Error("Gagal mendapatkan URL file");
+      }
+
+      const response = await fetch(signedUrl);
       const blob = await response.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -551,7 +587,7 @@ export default function Admin() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => window.open(sub.file_url, "_blank")}
+                onClick={() => handleViewFile(sub.file_url)}
               >
                 <Eye className="h-4 w-4 mr-2" />
                 Lihat File
