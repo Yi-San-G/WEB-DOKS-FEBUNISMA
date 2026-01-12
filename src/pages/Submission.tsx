@@ -57,6 +57,7 @@ export default function Submission() {
 
   const uploadFile = async (file: File, folder: string): Promise<string | null> => {
     const fileExt = file.name.split(".").pop();
+    // Store the file path (not public URL) since the bucket is now private
     const fileName = `${user?.id}/${folder}/${Date.now()}.${fileExt}`;
 
     const { error } = await supabase.storage
@@ -68,11 +69,9 @@ export default function Submission() {
       return null;
     }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from("submissions")
-      .getPublicUrl(fileName);
-
-    return publicUrl;
+    // Return the file path instead of public URL
+    // Files will be accessed via signed URLs when needed
+    return fileName;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
