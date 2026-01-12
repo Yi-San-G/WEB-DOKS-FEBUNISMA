@@ -86,7 +86,9 @@ export default function Submission() {
       return;
     }
 
-    if (!email.includes("@")) {
+    // Proper email validation using regex pattern
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
       toast({
         variant: "destructive",
         title: "Email Tidak Valid",
