@@ -150,7 +150,7 @@ export default function Index() {
         <div className="container mx-auto text-center">
           <p className="font-arabic text-xl mb-2">بسم الله الرحمن الرحيم</p>
           <p className="text-sm opacity-90">Komitmen untuk Masa Depan</p>
-          <p className="text-xs opacity-70 mt-2">© 2024 E-Submission Skripsi. All rights reserved.</p>
+          <p className="text-xs opacity-70 mt-2">© 2024 Deposit Online Karya Skripsi. All rights reserved.</p>
         </div>
       </footer>
     </div>;
