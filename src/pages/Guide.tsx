@@ -16,7 +16,7 @@ export default function Guide() {
               <HelpCircle className="h-8 w-8 text-primary-foreground" />
             </div>
             <CardTitle className="text-2xl font-bold text-primary">
-              Panduan E-Submission Skripsi
+              Panduan Pengguna
             </CardTitle>
             <CardDescription>
               Petunjuk lengkap penggunaan sistem submission skripsi
